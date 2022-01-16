@@ -1,4 +1,5 @@
 分析见 GCDetails.md
+
 1、串行GC
 
 串行垃圾收集器对年轻代使用标记复制算法（ mark-copy），对老年代使用标记清理压缩算法（ mark-sweep-compact ）
