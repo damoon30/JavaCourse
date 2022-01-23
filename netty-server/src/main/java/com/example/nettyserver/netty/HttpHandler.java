@@ -1,5 +1,13 @@
 package com.example.nettyserver.netty;
 
+import com.alibaba.fastjson.JSONObject;
+import com.example.nettyserver.client.HttpClient;
+
+import java.io.ByteArrayInputStream;
+import java.io.ObjectInputStream;
+import java.nio.charset.StandardCharsets;
+
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
@@ -26,14 +34,35 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
         try {
-            //logger.info("channelRead流量接口请求开始，时间为{}", startTime);
-            FullHttpRequest fullRequest = (FullHttpRequest) msg;
-            String uri = fullRequest.uri();
-            //logger.info("接收到的请求url为{}", uri);
-            if (uri.contains("/test")) {
-                handlerTest(fullRequest, ctx, "hello,fangwen");
-            } else {
-                handlerTest(fullRequest, ctx, "hello,others");
+//            //logger.info("channelRead流量接口请求开始，时间为{}", startTime);
+//            FullHttpRequest fullRequest = (FullHttpRequest) msg;
+//            String uri = fullRequest.uri();
+//            //logger.info("接收到的请求url为{}", uri);
+//            if (uri.contains("/test")) {
+//                handlerTest(fullRequest, ctx, "hello,fangwen");
+//            } else {
+//                handlerTest(fullRequest, ctx, "hello,others");
+//            }
+            // 转换为 ByteBuf 缓冲区
+            ByteBuf buffer = (ByteBuf) msg;
+            byte[] bytes = new byte[buffer.readableBytes()];
+            // 缓冲区数据写到byte数组
+            buffer.readBytes(bytes);
+
+            ByteArrayInputStream is = new ByteArrayInputStream(bytes);
+            ObjectInputStream iss = new ObjectInputStream(is);
+
+            JSONObject jsonObject = (JSONObject) iss.readObject();
+
+            is.close();
+            iss.close();
+
+            String url = jsonObject.getString("url");
+            if(url.contains("/test") ){
+                ctx.channel().writeAndFlush(Unpooled.copiedBuffer("hello,fangwen".getBytes(StandardCharsets.UTF_8)));
+            }else{
+                ctx.channel().writeAndFlush(Unpooled.copiedBuffer("hello,others".getBytes(StandardCharsets.UTF_8)));
+                ctx.channel().closeFuture();
             }
     
         } catch(Exception e) {
@@ -46,8 +75,8 @@ public class HttpHandler extends ChannelInboundHandlerAdapter {
     private void handlerTest(FullHttpRequest fullRequest, ChannelHandlerContext ctx, String body) {
         FullHttpResponse response = null;
         try {
-            String value = body; // 对接上次作业的httpclient或者okhttp请求另一个url的响应数据
-
+//            String value = body; // 对接上次作业的httpclient或者okhttp请求另一个url的响应数据
+            String value = HttpClient.get("http://localhost:8801/test");
 //            httpGet ...  http://localhost:8801
 //            返回的响应，"hello,nio";
 //            value = reponse....
